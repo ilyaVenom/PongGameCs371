@@ -85,15 +85,16 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         # Your code here to send an update to the server on your paddle's information,
         # where the ball is and the current score.
         # Feel free to change when the score is updated to suit your needs/requirements
-        paddle_info = f"{playerPaddleObj.rect.y},{opponentPaddleObj.rect.y},{ball.rect.x},{ball.rect.y},{lScore},{rScore}"
+        paddle_info = f"{playerPaddleObj.rect.y},{playerPaddle.moving},{ball.rect.x},{ball.rect.y},{lScore},{rScore}"
         client.send(paddle_info.encode())
         
         # Code here to receive the opponent's paddle, ball position, and scores from the server
         opponent_info = client.recv(1024).decode()
-        opponent_paddle_y, ball_x, ball_y, opponent_score = map(int, opponent_info.split(','))
+        opponent_paddle_y, opponent_paddle_moving, ball_x, ball_y, lScore, rScore = map(int, opponent_info.split(','))
 
         # Update the opponent's paddle and ball position
         opponentPaddleObj.rect.y = opponent_paddle_y
+        opponentPaddleObj.moving = opponent_paddle_moving
         ball.rect.x, ball.rect.y = ball_x, ball_y
         
         # =========================================================================================
@@ -163,7 +164,7 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         # then you are ahead of them in time, if theirs is larger, they are ahead of you, and you need to
         # catch up (use their info)
         sync += 1
-        # added to fix1
+       
         client.send(str(sync).encode())
 
         # Receive synchronization information from the server
