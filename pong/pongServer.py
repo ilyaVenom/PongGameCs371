@@ -18,13 +18,25 @@ import threading
 # I suggest you use the sync variable in pongClient.py to determine how out of sync your two
 # clients are and take actions to resync the games
 
-def handleClient(clientSocket, Cnum1): # client socket and client num
-    pass
+def handleClient(mySocket, otherSocket): # client socket and client num
+    
+    gameState = mySocket.recv(1024).decode()
+    print(gameState)
+
+
+    syncInfo = mySocket.recv(1024).decode()
+    print(syncInfo)
+
+    otherSocket.send(gameState.encode())
+    otherSocket.send(syncInfo.encode())
+  
+
 
 players = 0
 
 screenWidth = "700"
 screenHeight = "600"
+addressList = []
 
 
 # Creating the server's socket and binding it to an IP + Port
@@ -38,12 +50,14 @@ while (players < 2):
 
     # Client 1
     ClientSocket1, address = server.accept()
+    addressList.append(address)
     print(f"Connect from {address} has been made.")
     players += 1
     ClientSocket1.send("waiting".encode())
 
     # Client 2
     ClientSocket2, address = server.accept()
+    addressList.append(address)
     print(f"Connect from {address} has been made.")
     players += 1
 
@@ -66,8 +80,8 @@ print(clientTwoStartup)
 ClientSocket1.send(clientOneStartup.encode())
 ClientSocket2.send(clientTwoStartup.encode())
 
-t1 = threading.Thread(target=handleClient, args=(ClientSocket1, 1))
-t2 = threading.Thread(target=handleClient, args=(ClientSocket2, 2))
+t1 = threading.Thread(target=handleClient, args=(ClientSocket1, ClientSocket2))
+t2 = threading.Thread(target=handleClient, args=(ClientSocket2, ClientSocket1))
 t1.start()
 t2.start()
 
