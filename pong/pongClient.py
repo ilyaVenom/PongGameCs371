@@ -188,30 +188,26 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
     # errorLabel    A tk label widget, modify it's text to display messages to the user (example below)
     # app           The tk window object, needed to kill the window
     
+    waiting = 1
+
     # Create a socket and connect to the server
 
     # You don't have to use SOCK_STREAM, use what you think is best
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    # this can be useful for buffering
-    client.connect((ip,int(port))) #fix 1
-    #testing 1
-    #screenWidth = client.recv(1024).decode()
-    #print(screenWidth)
-    #client.send("got it".encode())
+   
+    client.connect((ip,int(port)))
 
-    #screenHeight = client.recv(1024).decode()
-    #print(screenHeight)
-    #client.send("got it".encode())
-
-    #playerSide = client.recv(1024).decode()
-    #print(playerSide)
-    
-    #client.send("got it".encode())
-
-    msg = client.recv(1024).decode()
-    screenWidth, screenHeight, playerSide = msg.split(",")
     # Get the required information from your server (screen width, height & player paddle, "left or "right)
     
+    msg = client.recv(1024).decode()
+
+    if msg == "waiting":
+        errorLabel.config(text=f"Waiting on another player to join...")
+        errorLabel.update()
+        msg = client.recv(1024).decode()
+
+
+    screenWidth, screenHeight, playerSide = msg.split()
 
     # If you have messages you'd like to show the user use the errorLabel widget like so
     errorLabel.config(text=f"Some update text. You input: IP: {ip}, Port: {port}")
