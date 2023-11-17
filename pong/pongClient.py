@@ -10,6 +10,7 @@ import pygame
 import tkinter as tk
 import sys
 import socket
+import json
 
 from assets.code.helperCode import *
 
@@ -18,8 +19,9 @@ from assets.code.helperCode import *
 # to suit your needs.
 
 
+
 def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.socket) -> None:
-    
+
     # Pygame inits
     pygame.mixer.pre_init(44100, -16, 2, 2048)
     pygame.init()
@@ -85,17 +87,40 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         # Your code here to send an update to the server on your paddle's information,
         # where the ball is and the current score.
         # Feel free to change when the score is updated to suit your needs/requirements
-        paddle_info = f"{playerPaddleObj.rect.y},{playerPaddle.moving},{ball.rect.x},{ball.rect.y},{lScore},{rScore}"
-        client.send(paddle_info.encode())
+
+        gameState = {
+            "playerPaddle": [],
+            "opponentPaddle": [],
+            "ball": [],
+            "lscore": 0,
+            "rscore": 0,
+            "sync": 0
+        }
+
+        gameState["playerPaddle"].append(playerPaddleObj.moving)
+        gameState["playerPaddle"].append(playerPaddleObj.rect.y)
+        gameState["ball"].append(ball_x)
+        gameState["ball"].append(ball_y)
+        gameState["opponentPaddle"].append(opponentPaddleObj.moving)
+        gameState["opponentPaddle"].append(opponentPaddleObj.rect.y)
+        gameState["lscore"] = lScore
+        gameState["rscore"] = rScore
+        gameState["sync"] = sync
+
+        client.send(json.dumps(gameState).encode())
+
         
         # Code here to receive the opponent's paddle, ball position, and scores from the server
-        opponent_info = client.recv(1024).decode()
-        opponent_paddle_y, opponent_paddle_moving, ball_x, ball_y, lScore, rScore = map(int, opponent_info.split(','))
+        gameStateStr = client.recv(1024).decode()
+        gameState = json.loads(gameStateStr)
+
+
 
         # Update the opponent's paddle and ball position
-        opponentPaddleObj.rect.y = opponent_paddle_y
-        opponentPaddleObj.moving = opponent_paddle_moving
-        ball.rect.x, ball.rect.y = ball_x, ball_y
+        opponentPaddleObj.moving = gameState["opponentPaddle"][0]
+        opponentPaddleObj.rect.y = gameState["opponentPaddle"][1]
+        ball.rect.x, ball.rect.y = gameState["ball"][0], gameState["ball"][1]
+        lScore, rScore = int(gameState["lscore"]), int(gameState["rscore"])
         
         # =========================================================================================
 
@@ -164,17 +189,26 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         # then you are ahead of them in time, if theirs is larger, they are ahead of you, and you need to
         # catch up (use their info)
         sync += 1
-       
-        client.send(str(sync).encode())
 
         # Receive synchronization information from the server
-        sync_info = client.recv(1024).decode()
-        opponent_sync = int(sync_info)
+
         
         # =========================================================================================
         # Send your server update here at the end of the game loop to sync your game with your
         # opponent's game
         # =========================================================================================
+
+        gameState["playerPaddle"].append(playerPaddleObj.moving)
+        gameState["playerPaddle"].append(playerPaddleObj.rect.y)
+        gameState["ball"].append(ball_x)
+        gameState["ball"].append(ball_y)
+        gameState["opponentPaddle"].append(opponentPaddleObj.moving)
+        gameState["opponentPaddle"].append(opponentPaddleObj.rect.y)
+        gameState["lscore"] = lScore
+        gameState["rscore"] = rScore
+        gameState["sync"] = sync
+
+        sync = int(client.recv(1024).decode())
 
 
 # This is where you will connect to the server to get the info required to call the game loop.  Mainly
