@@ -53,6 +53,9 @@ def handleClient(mySocket:socket.socket, number:int): # client socket and client
             else:
                 gameState2 = gameDataDict
 
+            gameState1["opponentPaddle"] = gameState2["playerPaddle"]
+            gameState2["opponentPaddle"] = gameState1["playerPaddle"]
+
             if gameState1["sync"] > gameState2["sync"]:
                 if number == 1:
                     mySocket.send(json.dumps(gameState1).encode())

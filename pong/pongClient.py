@@ -101,8 +101,8 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         gameState["playerPaddle"].append(playerPaddleObj.rect.y)
         gameState["ball"].append(ball.rect.x)
         gameState["ball"].append(ball.rect.y)
-        gameState["opponentPaddle"].append(opponentPaddleObj.moving)
-        gameState["opponentPaddle"].append(opponentPaddleObj.rect.y)
+        #gameState["opponentPaddle"].append(opponentPaddleObj.moving)
+        #gameState["opponentPaddle"].append(opponentPaddleObj.rect.y)
         gameState["lscore"] = lScore
         gameState["rscore"] = rScore
         gameState["sync"] = sync
