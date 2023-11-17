@@ -58,7 +58,7 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
     else:
         opponentPaddleObj = leftPaddle
         playerPaddleObj = rightPaddle
-
+    
     lScore = 0
     rScore = 0
 
@@ -99,8 +99,8 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
 
         gameState["playerPaddle"].append(playerPaddleObj.moving)
         gameState["playerPaddle"].append(playerPaddleObj.rect.y)
-        gameState["ball"].append(ball_x)
-        gameState["ball"].append(ball_y)
+        gameState["ball"].append(ball.rect.x)
+        gameState["ball"].append(ball.rect.y)
         gameState["opponentPaddle"].append(opponentPaddleObj.moving)
         gameState["opponentPaddle"].append(opponentPaddleObj.rect.y)
         gameState["lscore"] = lScore
@@ -200,8 +200,8 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
 
         gameState["playerPaddle"].append(playerPaddleObj.moving)
         gameState["playerPaddle"].append(playerPaddleObj.rect.y)
-        gameState["ball"].append(ball_x)
-        gameState["ball"].append(ball_y)
+        gameState["ball"].append(ball.rect.x)
+        gameState["ball"].append(ball.rect.y)
         gameState["opponentPaddle"].append(opponentPaddleObj.moving)
         gameState["opponentPaddle"].append(opponentPaddleObj.rect.y)
         gameState["lscore"] = lScore
