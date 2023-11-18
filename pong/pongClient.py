@@ -113,12 +113,13 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         # Code here to receive the opponent's paddle, ball position, and scores from the server
         gameStateStr = client.recv(1024).decode()
         gameState = json.loads(gameStateStr)
-
+        print(gameState)
 
 
         # Update the opponent's paddle and ball position
-        opponentPaddleObj.moving = gameState["opponentPaddle"][0]
-        opponentPaddleObj.rect.y = gameState["opponentPaddle"][1]
+        if gameState["opponentPaddle"][0]:
+            opponentPaddleObj.moving = gameState["opponentPaddle"][0]
+            opponentPaddleObj.rect.y = gameState["opponentPaddle"][1]
         ball.rect.x, ball.rect.y = gameState["ball"][0], gameState["ball"][1]
         lScore, rScore = int(gameState["lscore"]), int(gameState["rscore"])
         
