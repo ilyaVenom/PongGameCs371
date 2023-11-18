@@ -1,8 +1,9 @@
 # =================================================================================================
-# Contributing Authors:	    <Anyone who touched the code>
-# Email Addresses:          <Your uky.edu email addresses>
-# Date:                     <The date the file was last edited>
-# Purpose:                  <How this file contributes to the project>
+# Contributing Authors:	    <Ilya Segal> <Austin Purvis> <Yankier Perez>
+# Email Addresses:          <iyse222@uky.edu> <atpu225@uky.edu> <ypere759@uky.edu> 
+# Date:                     <11/17/23>
+# Purpose:                  <Responsible for connecting clients to a server and exchaning game state info
+#                            with said server. Also runs the pong game logic
 # Misc:                     <Not Required.  Anything else you might want to include>
 # =================================================================================================
 # and read over his code more:
@@ -88,6 +89,7 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         # where the ball is and the current score.
         # Feel free to change when the score is updated to suit your needs/requirements
 
+        # Initializing a blank game state dictionary each time the code loops (Otherwise the lists are continuously added to)
         gameState = {
             "playerPaddle": [],
             "opponentPaddle": [],
@@ -97,6 +99,7 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
             "sync": 0
         }
 
+        # Setting values in the above dictionary based on the current game state
         gameState["playerPaddle"].append(playerPaddleObj.moving)
         gameState["playerPaddle"].append(playerPaddleObj.rect.y)
         gameState["ball"].append(ball.rect.x)
@@ -107,10 +110,12 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         gameState["rscore"] = rScore
         gameState["sync"] = sync
 
+        # Sending a json dump of the game state to the server 
         client.send(json.dumps(gameState).encode())
 
         
         # Code here to receive the opponent's paddle, ball position, and scores from the server
+        # Receiving and reconstructing the game state dictionary from the server to update game
         gameStateStr = client.recv(1024).decode()
         gameState = json.loads(gameStateStr)
         print(gameState)
@@ -199,6 +204,7 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         # opponent's game
         # =========================================================================================
 
+        # Pulling current game state into dictionary
         gameState["playerPaddle"].append(playerPaddleObj.moving)
         gameState["playerPaddle"].append(playerPaddleObj.rect.y)
         gameState["ball"].append(ball.rect.x)
@@ -209,6 +215,10 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         gameState["rscore"] = rScore
         gameState["sync"] = sync
 
+        # Sending json dump to server
+        client.send(json.dumps(gameState).encode())
+
+        # Receiving up to date sync value and updating accordingly
         sync = int(client.recv(1024).decode())
 
 
@@ -224,25 +234,23 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
     # errorLabel    A tk label widget, modify it's text to display messages to the user (example below)
     # app           The tk window object, needed to kill the window
     
-    waiting = 1
 
     # Create a socket and connect to the server
 
     # You don't have to use SOCK_STREAM, use what you think is best
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-   
     client.connect((ip,int(port)))
 
     # Get the required information from your server (screen width, height & player paddle, "left or "right)
-    
     msg = client.recv(1024).decode()
 
+    # If received message was not startup info, and instead to wait, display a wait message on the screen
     if msg == "waiting":
         errorLabel.config(text=f"Waiting on another player to join...")
         errorLabel.update()
         msg = client.recv(1024).decode()
 
-
+    # Parsing startup info once both clients are connected 
     screenWidth, screenHeight, playerSide = msg.split()
 
     # If you have messages you'd like to show the user use the errorLabel widget like so
@@ -293,4 +301,4 @@ if __name__ == "__main__":
     # here for demo purposes only
     # but the next line should be comment out later.
 
-    playGame(640, 480,"left",socket.socket(socket.AF_INET, socket.SOCK_STREAM))
+    #playGame(640, 480,"left",socket.socket(socket.AF_INET, socket.SOCK_STREAM))
