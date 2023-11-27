@@ -1,5 +1,5 @@
 # =================================================================================================
-# Contributing Authors:	    <Ilya Segal> <Austin Purvis> <Yankier Perez>
+# Contributing Authors:	    <Ilya Segal> <Austin Purvis> <Yankier >
 # Email Addresses:          <iyse222@uky.edu> <atpu225@uky.edu> <ypere759@uky.edu> 
 # Date:                     <11/17/23>
 # Purpose:                  <Responsible for connecting clients to a server and exchaning game state info
@@ -62,7 +62,7 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
     
     lScore = 0
     rScore = 0
-
+    gameOver = False
     sync = 0
 
     while True:
@@ -89,45 +89,16 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         # where the ball is and the current score.
         # Feel free to change when the score is updated to suit your needs/requirements
 
-        # Initializing a blank game state dictionary each time the code loops (Otherwise the lists are continuously added to)
+        # Initializing game state dictionary each time the code loops 
         gameState = {
-            "playerPaddle": [],
-            "opponentPaddle": [],
-            "ball": [],
-            "lscore": 0,
-            "rscore": 0,
-            "sync": 0
+            "playerPaddle": playerPaddleObj.rect.y,
+            "opponentPaddle": opponentPaddleObj.rect.y,
+            "ball": [ball.rect.x, ball.rect.y],
+            "lscore": lScore,
+            "rscore": rScore,
+            "sync": sync
         }
 
-        # Setting values in the above dictionary based on the current game state
-        gameState["playerPaddle"].append(playerPaddleObj.moving)
-        gameState["playerPaddle"].append(playerPaddleObj.rect.y)
-        gameState["ball"].append(ball.rect.x)
-        gameState["ball"].append(ball.rect.y)
-        #gameState["opponentPaddle"].append(opponentPaddleObj.moving)
-        #gameState["opponentPaddle"].append(opponentPaddleObj.rect.y)
-        gameState["lscore"] = lScore
-        gameState["rscore"] = rScore
-        gameState["sync"] = sync
-
-        # Sending a json dump of the game state to the server 
-        client.send(json.dumps(gameState).encode())
-
-        
-        # Code here to receive the opponent's paddle, ball position, and scores from the server
-        # Receiving and reconstructing the game state dictionary from the server to update game
-        gameStateStr = client.recv(1024).decode()
-        gameState = json.loads(gameStateStr)
-        print(gameState)
-
-
-        # Update the opponent's paddle and ball position
-        if gameState["opponentPaddle"][0]:
-            opponentPaddleObj.moving = gameState["opponentPaddle"][0]
-            opponentPaddleObj.rect.y = gameState["opponentPaddle"][1]
-        ball.rect.x, ball.rect.y = gameState["ball"][0], gameState["ball"][1]
-        lScore, rScore = int(gameState["lscore"]), int(gameState["rscore"])
-        
         # =========================================================================================
 
         # Update the player paddle and opponent paddle's location on the screen
@@ -146,6 +117,7 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
             textRect = textSurface.get_rect()
             textRect.center = ((screenWidth/2), screenHeight/2)
             winMessage = screen.blit(textSurface, textRect)
+            gameOver = True
         else:
 
             # ==== Ball Logic =====================================================================
@@ -197,29 +169,36 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         sync += 1
 
         # Receive synchronization information from the server
-
-        
         # =========================================================================================
         # Send your server update here at the end of the game loop to sync your game with your
         # opponent's game
         # =========================================================================================
 
-        # Pulling current game state into dictionary
-        gameState["playerPaddle"].append(playerPaddleObj.moving)
-        gameState["playerPaddle"].append(playerPaddleObj.rect.y)
-        gameState["ball"].append(ball.rect.x)
-        gameState["ball"].append(ball.rect.y)
-        gameState["opponentPaddle"].append(opponentPaddleObj.moving)
-        gameState["opponentPaddle"].append(opponentPaddleObj.rect.y)
-        gameState["lscore"] = lScore
-        gameState["rscore"] = rScore
-        gameState["sync"] = sync
+        # Checking if game is over. If so, send message to server to shut down
+        if not gameOver:
+            client.send(json.dumps(gameState).encode())
+        else:
+            client.send("GAME OVER".encode())
+            pygame.quit()
 
-        # Sending json dump to server
-        client.send(json.dumps(gameState).encode())
+        # Receive new game state from server
+        updateGameState = client.recv(1024).decode()
+        updateGameState = json.loads(updateGameState)
 
-        # Receiving up to date sync value and updating accordingly
-        sync = int(client.recv(1024).decode())
+        # Setting opponent paddle information based on personal side
+        if playerPaddle == "left":
+            opponentPaddleObj.rect.y = updateGameState["playerPaddle2"]
+        else:
+            opponentPaddleObj.rect.y = updateGameState["playerPaddle1"]
+
+        # Updating ball data
+        # CURRENT ISSUE HERE
+        ballData = updateGameState["ball"]
+        if (ballData):
+            ball.rect.x, ball.rect.y = updateGameState["ball"][0], updateGameState["ball"][1]
+        
+        # Updating sync with in sync client
+        sync = updateGameState["sync"]
 
 
 # This is where you will connect to the server to get the info required to call the game loop.  Mainly

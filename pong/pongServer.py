@@ -12,8 +12,8 @@ import json
 
 # Values for the game's current state
 gameState1 = {
-    "playerPaddle": [],
-    "opponentPaddle": [],
+    "playerPaddle": 0,
+    "opponentPaddle": 0,
     "ball": [],
     "lscore": 0,
     "rscore": 0,
@@ -21,8 +21,18 @@ gameState1 = {
 }
 
 gameState2 = {
-    "playerPaddle": [],
-    "opponentPaddle": [],
+    "playerPaddle": 0,
+    "opponentPaddle": 0,
+    "ball": [],
+    "lscore": 0,
+    "rscore": 0,
+    "sync": 0
+}
+
+# Combined game state to send to both clients
+combinedGameState = {
+    "playerPaddle1": 0,
+    "playerPaddle2": 0,
     "ball": [],
     "lscore": 0,
     "rscore": 0,
@@ -47,49 +57,49 @@ def handleClient(mySocket:socket.socket, number:int): # client socket and client
     gameDataDict = {}
     global gameState1
     global gameState2
+    global combinedGameState
 
-    #try:
     while True:
         # Receiving data from client
         gameData = mySocket.recv(1024).decode()
-        # if gameData:
-        #     gameDataDict = json.loads(gameData)
+
+        # If score is > 4 end game
+        if gameData == "GAME OVER":
+            break
         
         # Converting string from client into dictionary via json library
         gameDataDict = json.loads(gameData)
 
         # Setting global variable based on which client thread is running (1 or 2)
         # Setting opponent to be the opposite number
-        # THIS IS WHERE OUR ISSUE IS
         if number == 1:
             gameState1 = gameDataDict
-            gameState1["opponentPaddle"] = gameState2["playerPaddle"]
 
         else:
             gameState2 = gameDataDict
-            gameState2["opponentPaddle"] = gameState1["playerPaddle"]
-            
-
+        
+        # Setting combined state to appropriate values
+        combinedGameState["playerPaddle1"] = gameState1["playerPaddle"]
+        combinedGameState["playerPaddle2"] = gameState2["playerPaddle"]
+        
         # Determining which game state is ahead and conforming to it by sending its game state back to both clients
-        if gameState1["sync"] > gameState2["sync"]:
-            if number == 1:
-                mySocket.send(json.dumps(gameState1).encode())
-            else:
-                # If 1 is ahead, use 1's data but swap player and opponent to send to 2 (So 2 doesnt view 1's data as its own)
-                gameState1["playerPaddle"], gameState1["opponentPaddle"] = gameState1["opponentPaddle"], gameState1["playerPaddle"]
-                mySocket.send(json.dumps(gameState1).encode())
+        if gameState1["sync"] >= gameState2["sync"]:
+            combinedGameState["ball"] = gameState1["ball"]
+            combinedGameState["lscore"] = gameState1["lscore"]
+            combinedGameState["rscore"] = gameState1["rscore"]
+            combinedGameState["sync"] = gameState1["sync"]
+
         else:
             # Same case as above but with 2 being ahead
-            if number == 2:
-                mySocket.send(json.dumps(gameState2).encode())
-            else:
-                gameState2["playerPaddle"], gameState2["opponentPaddle"] = gameState2["opponentPaddle"], gameState2["playerPaddle"]
-                mySocket.send(json.dumps(gameState2).encode())
+            combinedGameState["ball"] = gameState2["ball"]
+            combinedGameState["lscore"] = gameState2["lscore"]
+            combinedGameState["rscore"] = gameState2["rscore"]
+            combinedGameState["sync"] = gameState2["sync"]
 
-    # except Exception as e:
-    #     print(f"Error handling client {number}: {e}")
-    # finally:
-    #     mySocket.close()
+        # Sending combined game state to both clients
+        mySocket.send(json.dumps(combinedGameState).encode())
+
+
    
   
 
@@ -103,6 +113,7 @@ rscore = 0
 
 # Creating the server's socket and binding it to an IP + Port
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)      # Creating the server
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 server.bind(("localhost",1234))
 
 # While the number of connected clients is less than 2 (players)
@@ -137,36 +148,9 @@ t2 = threading.Thread(target=handleClient, args=(ClientSocket2, 2))
 t1.start()
 t2.start()
 
-# Loop to update sync value
-while True:
-
-    # Empty dictonaries for game states
-    client1game = {}
-    client2game = {}
-
-    # Receive json dump string
-    client1str = ClientSocket1.recv(1024).decode()
-    
-    # Load it into dictionary
-    if client1str:
-        client1game = json.loads(client1str)
-
-    # Same process as above
-    client2str = ClientSocket2.recv(1024).decode()
-    if client2str:
-        client2game = json.loads(client2str)
-
-    # Compare sync values, whichever is larger is sent to client's to be updated
-    if client1game["sync"] > client2game["sync"]:
-        ClientSocket1.send(json.dumps(client1game["sync"]).encode())
-        ClientSocket2.send(json.dumps(client1game["sync"]).encode())
-    else:
-        ClientSocket1.send(json.dumps(client2game["sync"]).encode())
-        ClientSocket2.send(json.dumps(client2game["sync"]).encode())
-
-    # check if either score is 5. If so, end loop
-    if client1game["lscore"] == 5 | client1game["rscore"] == 5 | client2game["lscore"] == 5 | client2game["rscore"] == 5:
-        break
+# Wait for both threads to finish their methods
+t1.join()
+t2.join()
 
 # Closing connection sockets
 ClientSocket1.close()
