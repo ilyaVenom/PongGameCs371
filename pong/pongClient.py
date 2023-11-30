@@ -1,28 +1,25 @@
 # =================================================================================================
-# Contributing Authors:	    <Ilya Segal> <Austin Purvis> <Yankier >
-# Email Addresses:          <iyse222@uky.edu> <atpu225@uky.edu> <ypere759@uky.edu> 
-# Date:                     <11/17/23>
-# Purpose:                  <Responsible for connecting clients to a server and exchaning game state info
-#                            with said server. Also runs the pong game logic
+# Contributing Authors:	    <Anyone who touched the code>
+# Email Addresses:          <Your uky.edu email addresses>
+# Date:                     <The date the file was last edited>
+# Purpose:                  <How this file contributes to the project>
 # Misc:                     <Not Required.  Anything else you might want to include>
 # =================================================================================================
-# and read over his code more:
+
 import pygame
 import tkinter as tk
 import sys
 import socket
 import json
+import time
 
 from assets.code.helperCode import *
 
 # This is the main game loop.  For the most part, you will not need to modify this.  The sections
 # where you should add to the code are marked.  Feel free to change any part of this project
 # to suit your needs.
-
-
-
 def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.socket) -> None:
-
+    
     # Pygame inits
     pygame.mixer.pre_init(44100, -16, 2, 2048)
     pygame.init()
@@ -59,10 +56,11 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
     else:
         opponentPaddleObj = leftPaddle
         playerPaddleObj = rightPaddle
-    
+
+    gameEnd = False
     lScore = 0
     rScore = 0
-    gameOver = False
+
     sync = 0
 
     while True:
@@ -83,22 +81,7 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
 
             elif event.type == pygame.KEYUP:
                 playerPaddleObj.moving = ""
-
-        # =========================================================================================
-        # Your code here to send an update to the server on your paddle's information,
-        # where the ball is and the current score.
-        # Feel free to change when the score is updated to suit your needs/requirements
-
-        # Initializing game state dictionary each time the code loops 
-        gameState = {
-            "playerPaddle": playerPaddleObj.rect.y,
-            "opponentPaddle": opponentPaddleObj.rect.y,
-            "ball": [ball.rect.x, ball.rect.y],
-            "lscore": lScore,
-            "rscore": rScore,
-            "sync": sync
-        }
-
+        
         # =========================================================================================
 
         # Update the player paddle and opponent paddle's location on the screen
@@ -117,7 +100,7 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
             textRect = textSurface.get_rect()
             textRect.center = ((screenWidth/2), screenHeight/2)
             winMessage = screen.blit(textSurface, textRect)
-            gameOver = True
+            gameEnd = True
         else:
 
             # ==== Ball Logic =====================================================================
@@ -167,19 +150,28 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         # then you are ahead of them in time, if theirs is larger, they are ahead of you, and you need to
         # catch up (use their info)
         sync += 1
-
-        # Receive synchronization information from the server
         # =========================================================================================
         # Send your server update here at the end of the game loop to sync your game with your
         # opponent's game
-        # =========================================================================================
 
-        # Checking if game is over. If so, send message to server to shut down
-        if not gameOver:
+        # Collecting the client's game state
+        gameState = {
+            "playerPaddle": playerPaddleObj.rect.y,
+            "opponentPaddle": opponentPaddleObj.rect.y,
+            "ball": [ball.rect.x, ball.rect.y],
+            "lscore": lScore,
+            "rscore": rScore,
+            "sync": sync
+        }
+
+        # if lScore or rScore is > 4, tell the server to end the game
+        if not gameEnd:
             client.send(json.dumps(gameState).encode())
         else:
             client.send("GAME OVER".encode())
+            time.sleep(4)
             pygame.quit()
+            sys.exit()
 
         # Receive new game state from server
         updateGameState = client.recv(1024).decode()
@@ -191,14 +183,11 @@ def playGame(screenWidth:int, screenHeight:int, playerPaddle:str, client:socket.
         else:
             opponentPaddleObj.rect.y = updateGameState["playerPaddle1"]
 
-        # Updating ball data
-        # CURRENT ISSUE HERE
-        ballData = updateGameState["ball"]
-        if (ballData):
-            ball.rect.x, ball.rect.y = updateGameState["ball"][0], updateGameState["ball"][1]
-        
-        # Updating sync with in sync client
-        sync = updateGameState["sync"]
+        ball.rect.x, ball.rect.y = updateGameState["ball"][0], updateGameState["ball"][1]
+
+        # =========================================================================================
+
+
 
 
 # This is where you will connect to the server to get the info required to call the game loop.  Mainly
@@ -213,13 +202,10 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
     # errorLabel    A tk label widget, modify it's text to display messages to the user (example below)
     # app           The tk window object, needed to kill the window
     
-
     # Create a socket and connect to the server
-
     # You don't have to use SOCK_STREAM, use what you think is best
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client.connect((ip,int(port)))
-
     # Get the required information from your server (screen width, height & player paddle, "left or "right)
     msg = client.recv(1024).decode()
 
@@ -239,8 +225,9 @@ def joinServer(ip:str, port:str, errorLabel:tk.Label, app:tk.Tk) -> None:
 
     # Close this window and start the game with the info passed to you from the server
     app.withdraw()     # Hides the window (we'll kill it later)
-    playGame(int(screenWidth), int(screenHeight) , playerSide, client)  # User will be either left or right paddle
+    playGame(int(screenWidth), int(screenHeight), playerSide, client)  # User will be either left or right paddle
     app.quit()         # Kills the window
+
 
 # This displays the opening screen, you don't need to edit this (but may if you like)
 def startScreen():
@@ -278,6 +265,4 @@ if __name__ == "__main__":
     # Uncomment the line below if you want to play the game without a server to see how it should work
     # the startScreen() function should call playGame with the arguments given to it by the server this is
     # here for demo purposes only
-    # but the next line should be comment out later.
-
     #playGame(640, 480,"left",socket.socket(socket.AF_INET, socket.SOCK_STREAM))
